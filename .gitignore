@@ -1,0 +1,17 @@
+# Ignore python virtual environments
+venv/
+.venv/
+env/
+
+# Ignore python bytecode cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore local sqlite databases containing real user logs
+users.db
+
+# Ignore system configuration files
+.DS_Store
+Thumbs.db
