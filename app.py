@@ -13,23 +13,31 @@ model = joblib.load("heart_disease_model.pkl")
 # Required secret key for tracking flashes and sessions safely
 app.secret_key = "super_secure_random_heart_key" 
 
-# 🚀 AUTOMATIC DATABASE INITIALIZATION ON RENDER
-# This runs once before the very first request hits the server
+# 🚀 PRODUCTION DATABASE AUTO-INITIALIZATION
 @app.before_request
 def initialize_database():
+    # This explicitly builds the database and tables inline on Render if missing
     if not os.path.exists('users.db'):
-        print("Database not found. Initializing users.db dynamically...")
+        print("Database file missing. Initializing users.db with schema...")
         try:
-            import database
-            # If your database script uses a function wrapper like init_db, uncomment below:
-            # database.init_db() 
-            print("Database tables created successfully!")
+            conn = sqlite3.connect("users.db")
+            cursor = conn.cursor()
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                fullname TEXT NOT NULL,
+                username TEXT NOT NULL UNIQUE,
+                password TEXT NOT NULL
+            );
+            """)
+            conn.commit()
+            conn.close()
+            print("Database setup completed successfully.")
         except Exception as e:
-            print(f"Error initializing database: {str(e)}")
+            print(f"Database initialization failed: {str(e)}")
 
 @app.route("/dashboard")
 def dashboard():
-    # Force access restriction unless user is authenticated
     if "user" not in session:
         return redirect("/")
     return render_template("index.html")
@@ -47,7 +55,7 @@ def login():
         conn.close()
 
         if user and check_password_hash(user[0], password):
-            session["user"] = username  # Save username session state
+            session["user"] = username  
             return redirect("/dashboard")
         else:
             flash("Invalid Username or Password") 
