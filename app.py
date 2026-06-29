@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify, redirect, session, f
 import pandas as pd
 import joblib
 import sqlite3
+import os
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
@@ -11,6 +12,20 @@ model = joblib.load("heart_disease_model.pkl")
 
 # Required secret key for tracking flashes and sessions safely
 app.secret_key = "super_secure_random_heart_key" 
+
+# 🚀 AUTOMATIC DATABASE INITIALIZATION ON RENDER
+# This runs once before the very first request hits the server
+@app.before_request
+def initialize_database():
+    if not os.path.exists('users.db'):
+        print("Database not found. Initializing users.db dynamically...")
+        try:
+            import database
+            # If your database script uses a function wrapper like init_db, uncomment below:
+            # database.init_db() 
+            print("Database tables created successfully!")
+        except Exception as e:
+            print(f"Error initializing database: {str(e)}")
 
 @app.route("/dashboard")
 def dashboard():
@@ -118,19 +133,17 @@ def logout():
 
 @app.route("/delete_account", methods=["POST"])
 def delete_account():
-    # Only allow removal if the user is verified in session
     if "user" not in session:
         return redirect("/")
         
     username_to_delete = session["user"]
-    
     conn = sqlite3.connect("users.db")
     cursor = conn.cursor()
     
     try:
         cursor.execute("DELETE FROM users WHERE username=?", (username_to_delete,))
         conn.commit()
-        session.clear() # Clear out login session token completely
+        session.clear() 
         flash("Your account has been permanently deleted.")
     except Exception as e:
         flash("An error occurred during account deletion.")
